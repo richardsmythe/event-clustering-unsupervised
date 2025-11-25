@@ -234,3 +234,46 @@ def run_eda(df):
         if col in df.columns:
             print(f"\nValue counts for {col}:")
             print(df[col].value_counts())
+
+def add_residual_features(df):
+
+    if 'Loss_log' not in df.columns and 'Loss' in df.columns:
+        df['Loss_log'] = np.log1p(df['Loss'])
+
+    reg_stats = df.groupby('Region')['Loss_log'].agg(['mean', 'std']).rename(columns={'mean': 'mean_reg', 'std': 'std_reg'})
+    reg_stats['std_reg'] = reg_stats['std_reg'].fillna(0)
+    df = df.join(reg_stats, on='Region')
+    df['Region_Loss_Z'] = ((df['Loss_log'] - df['mean_reg']) / (reg_stats['std_reg'].replace(0, 1e-6).loc[df['Region']].values + 1e-6)).clip(-5, 5)
+
+
+    lob_stats = df.groupby('LOB_Pure')['Loss_log'].agg(['mean', 'std']).rename(columns={'mean': 'mean_lob', 'std': 'std_lob'})
+    lob_stats['std_lob'] = lob_stats['std_lob'].fillna(0)
+    df = df.join(lob_stats, on='LOB_Pure')
+    df['LOB_Loss_Z'] = ((df['Loss_log'] - df['mean_lob']) / (lob_stats['std_lob'].replace(0, 1e-6).loc[df['LOB_Pure']].values + 1e-6)).clip(-5, 5)
+
+
+    vol_stats = df.groupby('Region')['County_LossVolatility'].agg(['mean', 'std']).rename(columns={'mean': 'mean_vol', 'std': 'std_vol'})
+    vol_stats['std_vol'] = vol_stats['std_vol'].fillna(0)
+    df = df.join(vol_stats, on='Region')
+    df['County_Vol_Z'] = ((df['County_LossVolatility'] - df['mean_vol']) / (vol_stats['std_vol'].replace(0, 1e-6).loc[df['Region']].values + 1e-6)).clip(-5, 5)
+
+
+    if 'Ratio' in df.columns:
+        reg_ratio_mean = df.groupby('Region')['Ratio'].transform('mean')
+        df['Ratio_vs_RegionAvg'] = df['Ratio'] / (reg_ratio_mean + 1e-6)
+        df['Log_Ratio_Dev'] = np.log(df['Ratio_vs_RegionAvg'] + 1e-6).clip(-5, 5)
+    else:
+        df['Log_Ratio_Dev'] = 0.0
+
+    # Percentile ranks
+    df['Loss_region_pct'] = df.groupby('Region')['Loss'].rank(pct=True)
+    df['Vol_region_pct'] = df.groupby('Region')['County_LossVolatility'].rank(pct=True)
+
+    return df
+
+
+def tag_outliers(df, loss_col='Loss_log', q=0.99):
+    """Tag top-q quantile of loss_col as outliers."""
+    thresh = df[loss_col].quantile(q)
+    df['IsOutlier'] = (df[loss_col] > thresh).astype(int)
+    return df, thresh
