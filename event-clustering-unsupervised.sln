@@ -1,0 +1,23 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.14.36705.20 d17.14
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{888888A0-9F3D-457C-B088-3A5042F75D52}") = "event-clustering-unsupervised", "event-clustering-unsupervised.pyproj", "{DE3D69F3-D679-41C8-9CAA-CA8F4E4BE5D1}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{DE3D69F3-D679-41C8-9CAA-CA8F4E4BE5D1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DE3D69F3-D679-41C8-9CAA-CA8F4E4BE5D1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {A4225E17-52E5-4BBA-882D-AAF4B1B4D986}
+	EndGlobalSection
+EndGlobal
