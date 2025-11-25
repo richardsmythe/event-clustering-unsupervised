@@ -2,7 +2,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
-from ydata_profiling import ProfileReport
 from sklearn.preprocessing import StandardScaler
 
 def load_data(filepath):
@@ -39,33 +38,91 @@ def encode_categoricals(df):
         if n_unique < 50:
             df[col + '_code'] = df[col].astype('category').cat.codes
         else:
-            # create frequency column but keep original for readability
             df[col + '_freq'] = df[col].map(df[col].value_counts())
+    return df
+
+def engineer_features(df):
+    print("\nNew features from existing data created.")
+    
+    if 'County_LOB' in df.columns:
+        df['County'] = df['County_LOB'].str.split('_').str[1]
+        
+        county_stats = df.groupby('County').agg({
+            'Loss': ['mean', 'std', 'count', 'sum']
+        }).reset_index()
+        county_stats.columns = ['County', 'County_AvgLoss', 'County_StdLoss', 'County_EventCount', 'County_TotalLoss']
+       
+
+        county_stats['County_StdLoss'] = county_stats['County_StdLoss'].fillna(0)
+        
+        df = df.merge(county_stats, on='County', how='left')
+        
+        df['County_AvgLoss_log'] = np.log1p(df['County_AvgLoss'])
+        df['County_TotalLoss_log'] = np.log1p(df['County_TotalLoss'])
+        df['County_LossVolatility'] = df['County_StdLoss'] / (df['County_AvgLoss'] + 1)
+
+    
+    if 'LOB_Pure' in df.columns and 'Region' in df.columns:
+        lob_region_stats = df.groupby(['LOB_Pure', 'Region']).agg({
+            'Loss': ['mean', 'count']
+        }).reset_index()
+        lob_region_stats.columns = ['LOB_Pure', 'Region', 'LOB_Region_AvgLoss', 'LOB_Region_Count']
+        
+        df = df.merge(lob_region_stats, on=['LOB_Pure', 'Region'], how='left')
+        df['LOB_Region_AvgLoss_log'] = np.log1p(df['LOB_Region_AvgLoss'])
+        
+
+    
+    if 'Loss' in df.columns:
+        df['Loss_Percentile_InRegion'] = df.groupby('Region')['Loss'].rank(pct=True)
+        df['Loss_Percentile_InLOB'] = df.groupby('LOB_Pure')['Loss'].rank(pct=True)
+        
+        loss_95th = df['Loss'].quantile(0.95)
+        loss_99th = df['Loss'].quantile(0.99)
+        df['IsExtremeLoss_95'] = (df['Loss'] >= loss_95th).astype(int)
+        df['IsExtremeLoss_99'] = (df['Loss'] >= loss_99th).astype(int)       
+
+    
+    if 'Ratio' in df.columns:
+        df['Ratio_Category'] = pd.cut(df['Ratio'], bins=5, labels=['VeryLow', 'Low', 'Medium', 'High', 'VeryHigh'])
+        df['Ratio_Category_code'] = df['Ratio_Category'].astype('category').cat.codes
+        
+        region_avg_ratio = df.groupby('Region')['Ratio'].transform('mean')
+        df['Ratio_vs_RegionAvg'] = df['Ratio'] / (region_avg_ratio + 0.01)
+        
+
+    
+    if 'County' in df.columns and 'Loss' in df.columns:
+        region_total = df.groupby('Region')['Loss'].transform('sum')
+        county_total = df.groupby(['Region', 'County'])['Loss'].transform('sum')
+        df['County_LossShare_InRegion'] = county_total / (region_total + 1)
+        
+  
+
+    
     return df
 
 def clean_data(df):
     df = drop_constant_columns(df)
     df = handle_missing_values(df)
-    # create a capped and logtransformed loss for modeling, but keep original Loss column
+    
     if 'Loss' in df.columns:
         df['Loss_capped'] = cap_outliers(df['Loss'], 99)
         df['Loss_log'] = np.log1p(df['Loss_capped'])
     
-
     if 'LOB_Peril_Region' in df.columns:
         df['LOB_Pure'] = df['LOB_Peril_Region'].str.split('_').str[-1]
         df['Peril'] = df['LOB_Peril_Region'].str.split('_').str[1]
         df['Region'] = df['LOB_Peril_Region'].str.split('_').str[2]
     
     df = encode_categoricals(df)
-    #keep originals for later
+    df = engineer_features(df)
+    
     return df
 
 def _select_clustering_features(df, features):
-    """Pick which features to use for clustering"""
     features = [f for f in features if f in df.columns]
     
-    # Remove features that don't vary
     to_remove = []
     for f in features:
         if df[f].nunique() <= 1:
@@ -85,15 +142,21 @@ def _scale_features(df_features, scaler=None):
     return X_scaled, scaler
 
 def prepare_features_for_clustering(df, features, scale=True):
-    """Get features ready for clustering"""
     features_df = _select_clustering_features(df, features)
     if features_df.empty:
         raise ValueError('No valid features found for clustering.')
 
     print(f"\nUsing features: {', '.join(features_df.columns)}")
     print(f"{len(features_df.columns)} features, {len(features_df)} observations")
+    
+    nan_counts = features_df.isnull().sum()
+    if nan_counts.any():
+        print("\n NaN values found:")
+        for col, count in nan_counts[nan_counts > 0].items():
+            print(f"  {col}: {count} NaNs ({count/len(features_df)*100:.1f}%)")
+        print("Filling with median values...")
+        features_df = features_df.fillna(features_df.median())
   
-    # Check if any features are too correlated
     corr_matrix = features_df.corr()
     
     high_corr = []
@@ -122,7 +185,6 @@ def run_eda(df):
     print(df.info())
     print(df.describe(include='all'))
     
-    # correlation check
     numeric_df = df.select_dtypes(include=[np.number])
     if len(numeric_df.columns) > 1:
         correlation_matrix = numeric_df.corr()
@@ -153,7 +215,6 @@ def run_eda(df):
         else:
             print("No highly correlated pairs found.")      
 
-
     if 'Loss' in df.columns:
         plt.hist(df['Loss'], bins=50, log=True)
         plt.xlabel('Event Loss')
@@ -168,12 +229,8 @@ def run_eda(df):
         plt.title('Distribution of Log Transformed Event Losses')
         plt.show()
   
-
     categorical_cols = ['LOB_Peril_Region', 'Category', 'County_LOB']
     for col in categorical_cols:
         if col in df.columns:
             print(f"\nValue counts for {col}:")
             print(df[col].value_counts())
-
-    #profile = ProfileReport(df)
-    #profile.to_file("eda_report.html")

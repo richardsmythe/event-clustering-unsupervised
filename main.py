@@ -6,7 +6,7 @@ from sklearn.decomposition import PCA
 from data import clean_data, load_data, prepare_features_for_clustering
 from model_selection import find_optimal_k_elbow, fit_kmeans, print_cluster_summary
 
-FILEPATH = r'\EQ_LOB.csv'
+FILEPATH = r'<removed>'
 
 def plot_clusters(df, x_scaled):
     pca = PCA(n_components=2)
@@ -39,13 +39,13 @@ def plot_clusters(df, x_scaled):
 
 def main():
     df = load_data(FILEPATH)
-    df = clean_data(df)    
+    df = clean_data(df)     
 
-    features = ['Loss_log', 'Ratio', 'LOB_Pure_code', 'Region_code']
+    features = ['Loss_log', 'Ratio', 'LOB_Pure_code', 'County_AvgLoss_log', 'County_LossVolatility']
     x = prepare_features_for_clustering(df, features=features)
     
     k = find_optimal_k_elbow(x, max_k=10)
-    model = fit_kmeans(x, n_clusters=k)    
+    model = fit_kmeans(x, n_clusters=4)    
     df['cluster'] = model.labels_
     
     print_cluster_summary(df)

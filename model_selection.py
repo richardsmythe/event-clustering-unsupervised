@@ -1,4 +1,4 @@
-import matplotlib.pyplot as plt
+﻿import matplotlib.pyplot as plt
 from sklearn.cluster import KMeans
 import numpy as np
 
@@ -32,7 +32,7 @@ def fit_kmeans(X, n_clusters, random_state=42):
     return kmeans
 
 def print_cluster_summary(df):
-    print("\nWhat's in each cluster:")
+    print("\nCluster Summary:")
     print("-" * 60)
     
     for cluster_id in sorted(df['cluster'].unique()):
@@ -42,15 +42,19 @@ def print_cluster_summary(df):
         total_loss = cluster_data['Loss'].sum()
         avg_loss = cluster_data['Loss'].mean()
         
-        print(f"\nCluster {cluster_id}: {n} events")
+        print(f"\nCluster {cluster_id}: {n} events ({n/len(df)*100:.1f}% of data)")
         print(f"  Total loss: ${total_loss/1e9:.1f}B")
         print(f"  Average loss: ${avg_loss/1e6:.1f}M")        
 
         regions = cluster_data['Region'].value_counts()
-        print(f"  Regions: {dict(regions)}")        
+        region_pcts = (regions / n * 100).round(1)
+        print(f"  Regions: {dict(regions)}")
+        print(f"  Region %: {dict(region_pcts)}")
 
         lobs = cluster_data['LOB_Pure'].value_counts()
+        lob_pcts = (lobs / n * 100).round(1)
         print(f"  LOBs: {dict(lobs)}")
+        print(f"  LOB %: {dict(lob_pcts)}")
 
     print("\n" + "-" * 60)    
 
@@ -61,8 +65,20 @@ def print_cluster_summary(df):
     high_regions = df[df['cluster'] == high_cluster]['Region'].value_counts().head(2).index.tolist()
     low_regions = df[df['cluster'] == low_cluster]['Region'].value_counts().head(2).index.tolist()
     
-    print(f"High-exposure cluster ({high_cluster}): {', '.join(high_regions)}")
-    print(f"Lower-exposure cluster ({low_cluster}): {', '.join(low_regions)}")
+    print(f"Highest avg loss cluster ({high_cluster}): {', '.join(high_regions)}")
+    print(f"Lowest avg loss cluster ({low_cluster}): {', '.join(low_regions)}")
 
-    if 'VI10' in high_regions and 'PR' in high_regions:
-        print("Note: VI10 clusters with PR despite being geographically VI")
+    print("\nGeographic Distribution:")
+    all_mixed = True
+    for cluster_id in sorted(df['cluster'].unique()):
+        cluster_data = df[df['cluster'] == cluster_id]
+        top_region = cluster_data['Region'].value_counts().iloc[0]
+        top_region_name = cluster_data['Region'].value_counts().index[0]
+        purity = (top_region / len(cluster_data) * 100)
+        print(f"  Cluster {cluster_id}: {purity:.1f}% from {top_region_name}")
+        
+        if purity >= 80:
+            all_mixed = False
+    
+    if all_mixed:
+        print("\nNote: All clusters contain mixed regions - patterns cross geographic boundaries")
