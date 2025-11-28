@@ -4,6 +4,9 @@
 
 Unsupervised clustering analysis was conducted on earthquake event data from Puerto Rico and the Virgin Islands. The goal was to identify risk patterns based on loss severity, county-level characteristics, and line of business (LOB) to support reinsurance and pricing decisions.
 
+The clusters (0-4) that are created are based on patterns in the risk features and the risk tiers (High/Medium/Low) are created by scoring the clusters based on loss magnitude + volatility.
+<img width="987" height="588" alt="image" src="https://github.com/user-attachments/assets/f31098b9-a93e-48b9-ad5f-59a22d3806d9" />
+
 ## Methodology
 
 ### Data Preparation and Feature Engineering
