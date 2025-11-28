@@ -22,6 +22,9 @@ Principal Component Analysis reduced six engineered features to three components
 
 A Random Forest classifier revealed that county volatility was the dominant factor at 31% of predictive power, followed by LOB-specific losses and ratio deviations at 22% each. Regional loss patterns and percentile rankings played smaller but meaningful roles.
 
+<img width="1065" height="647" alt="image" src="https://github.com/user-attachments/assets/343dcc47-3d57-44d4-b09a-daeb1b8aa38e" />
+
+
 ## Results and Risk Tier Classification
 
 ### Cluster Profiles
@@ -37,6 +40,8 @@ A Random Forest classifier revealed that county volatility was the dominant fact
 **Cluster 4 (1,678 events, 36%)** formed the largest segment with $57 million average losses. Puerto Rico was strongly represented at 1.11 times baseline, with auto insurance enriched at 1.51 times. Risk score: 83.
 
 ### Risk Tier Distribution
+
+<img width="1186" height="684" alt="image" src="https://github.com/user-attachments/assets/7b41a609-4d46-47fa-b739-895fc168aadf" />
 
 Four clusters qualified as high risk, containing 87% of events and totaling $216 billion in losses. Puerto Rico dominated with 2,635 events, followed by VI20 with 561. The single medium-risk cluster contained 13% of events with just $290 million in total losses. The 48 outliers averaged nearly $6 billion per event, with the largest single event reaching $21.7 billion.
 
