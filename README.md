@@ -1,62 +1,69 @@
-# Clustered Catastrophe Events
+# Unsupervised Clustering Analysis for Earthquake Risk Assessment
+
+## Introduction
 
 Unsupervised clustering analysis was conducted on earthquake event data from Puerto Rico and the Virgin Islands. The goal was to identify risk patterns based on loss severity, county-level characteristics, and line of business (LOB) to support reinsurance and pricing decisions.
 
----
+## Methodology
 
-## KMeans Clustering Process
+### Data Preparation and Feature Engineering
 
-- Analysed approximately **4,740 event records**, removing 48 extreme outliers (~1% of the data).
-- Used **Principal Component Analysis (PCA)** to reduce dimensionality, with the first three components explaining **97% of the variance**.
-- Applied KMeans clustering, selecting **5 clusters** based on silhouette scores and inertia.
-- Merged clusters back into the full dataset and analysed cluster characteristics using feature importance and PCA visualisation.
+The analysis started with 4,740 insurance event records representing earthquake losses across different counties, regions, and lines of business. Feature engineering focused on creating standardized metrics that could capture relative risk across different scales. For each event, we calculated z-scores for regional and LOB losses, allowing fair comparisons regardless of absolute size. County-level volatility measures were constructed by analyzing loss variance within each county. Residual features captured deviations from expected patterns, including ratios of actual losses to regional averages and percentile rankings within regions and LOBs.
 
----
+### Outlier Detection
 
-<img width="1184" height="884" alt="cluster_pca_kmeans" src="https://github.com/user-attachments/assets/6df05928-ac5b-45d8-8bd3-5fde96d63b92" />
+Extreme loss events were identified using the 99th percentile of log-transformed losses. This flagged 48 outliers representing 1% of events but accounting for over $2 trillion in catastrophic losses. These were set aside for separate analysis to prevent distortion of the clustering process.
 
+### Dimensionality Reduction and Clustering
 
-## Key Results
+Principal Component Analysis reduced six engineered features to three components, explaining 98% of the variance. KMeans clustering was evaluated from 2 to 12 clusters using silhouette scores to measure quality. Five clusters emerged as optimal with a silhouette score of 0.334. Gaussian Mixture Models were tested but produced 11 overlapping components with a lower silhouette score of 0.109, so KMeans was selected.
 
-- **Outliers**: 48 records removed (1% of data).
-- **PCA Variance Explained**: 97% (PC1: 44%, PC2: 29%, PC3: 24%).
-- **Optimal Clusters**: 5 clusters identified with moderate separation (silhouette score ≈ 0.334).
-- **Key Features Driving Clusters**:
-  - **County Volatility (County_Vol_Z)**: Most significant factor.
-  - **Pricing Deviation (Log_Ratio_Dev)**: Second most important.
-  - **LOB Loss Z-Score (LOB_Loss_Z)**: Moderate influence.
+### Feature Importance
 
----
+A Random Forest classifier revealed that county volatility was the dominant factor at 31% of predictive power, followed by LOB-specific losses and ratio deviations at 22% each. Regional loss patterns and percentile rankings played smaller but meaningful roles.
 
-## Cluster Insights
-
-### General Observations
-- The PCA scatter plot shows some **distinct subgroups** but also a **central overlap** where clusters mix. This aligns with the moderate silhouette score and confidence levels.
-- Clusters are primarily driven by **county-level volatility** and **pricing deviation**, with residual loss relative to region and LOB playing a secondary role.
+## Results and Risk Tier Classification
 
 ### Cluster Profiles
-1. **High-Risk Cluster**: 
-   - Higher-than-average losses.
-   - Very high county-level volatility.
-   - Likely represents risky, high-variance counties.
 
-2. **Stable Cluster**: 
-   - Lower-than-average losses.
-   - Low volatility.
-   - Represents stable, low-loss counties.
+**Cluster 0 (579 events, 12%)** had the highest risk with average losses of $118 million. County volatility was extremely high (z-score 1.23) with strong Virgin Islands concentration. Auto insurance was enriched at 1.63 times baseline. Risk score: 100.
 
-3. **Distinct Ratio Behaviour Cluster**: 
-   - Losses near the average.
-   - Very low pricing ratio deviation.
-   - Indicates unique pricing behaviour.
+**Cluster 1 (1,290 events, 28%)** showed moderate losses of $7.7 million but elevated volatility (z-score 0.39). Geographically diverse with notable auto insurance underrepresentation at 23% of expected levels. Risk score: 72.
 
-4. & 5. **Mixed Clusters**: 
-   - Moderate losses and volatility.
-   - Differing levels of LOB and regional enrichment.
+**Cluster 2 (491 events, 11%)** consisted of high-value but stable events averaging $60 million. The defining characteristic was extreme negative deviation in loss ratios (z-score -2.07), suggesting favorable loss-to-premium relationships. Risk score: 81.
 
----
+**Cluster 3 (662 events, 14%)** was the only medium-risk cluster with tiny average losses of $480,000. County volatility was strongly negative (z-score -1.66), indicating stable areas. Commercial insurance dominated while auto was absent. Risk score: 50.
 
-## Key Takeaways
-- **Volatility and pricing deviation** are the primary drivers of segmentation.
-- The clusters provide actionable insights into risk patterns, with clear distinctions between high-risk, stable, and mixed groups.
-- While some clusters are compact and well-defined, others show overlap, suggesting soft boundaries and potential for further refinement.
+**Cluster 4 (1,678 events, 36%)** formed the largest segment with $57 million average losses. Puerto Rico was strongly represented at 1.11 times baseline, with auto insurance enriched at 1.51 times. Risk score: 83.
+
+### Risk Tier Distribution
+
+Four clusters qualified as high risk, containing 87% of events and totaling $216 billion in losses. Puerto Rico dominated with 2,635 events, followed by VI20 with 561. The single medium-risk cluster contained 13% of events with just $290 million in total losses. The 48 outliers averaged nearly $6 billion per event, with the largest single event reaching $21.7 billion.
+
+## Key Insights
+
+**Geographic Risk Concentration:** Virgin Islands regions showed disproportionate representation in the highest-risk cluster with enrichment factors approaching 1.8, indicating both severe exposure and lack of geographic diversification. Puerto Rico showed more balanced distribution except in Cluster 4.
+
+**Line of Business Patterns:** Auto insurance consistently marked high-risk clusters with enrichment above 1.5, likely reflecting concentrated population centers rather than inherent coverage risk. Commercial insurance showed enrichment in the medium-risk cluster, suggesting deliberate underwriting toward stable counties.
+
+**Volatility as Primary Driver:** County-level volatility contributed 31% of predictive power, indicating that location matters more than raw loss amount. Two events with similar losses can have dramatically different risk profiles based on county stability.
+
+**Reinsurance Implications:** The medium-risk cluster could be self-insured with retentions around $10 million. High-risk clusters require traditional excess-of-loss coverage with attachment points around $25 to $50 million. Outliers demand catastrophe bonds or retrocessional coverage with attachments above $1 billion.
+
+**Confidence Considerations:** Cluster assignment confidence averaged 0.46, indicating many events fell near boundaries. The 10 lowest-confidence assignments had scores below 0.004, essentially random. These borderline cases should receive manual review rather than automated tier assignment.
+
+## Conclusion
+
+The clustering analysis successfully identified five distinct risk patterns driven primarily by county volatility rather than absolute loss magnitude. The four high-risk clusters accounting for 87% of events share characteristics of geographic concentration, elevated volatility, and auto insurance enrichment. The medium-risk cluster provides opportunity for improved capital efficiency through higher retentions. The extreme tail of 48 outliers requires catastrophe-specific reinsurance structures. These patterns translate directly into pricing and underwriting decisions, with county-level risk factors deserving greater weight in rating algorithms, particularly for Virgin Islands exposures.
+
+
+### Features Used for Clustering
+
+1. `Region_Loss_Z` - Regional loss z-scores
+2. `LOB_Loss_Z` - Line of business loss z-scores
+3. `County_Vol_Z` - County volatility z-scores
+4. `Log_Ratio_Dev` - Log ratio deviation from regional average
+5. `Loss_region_pct` - Loss percentile within region
+6. `Vol_region_pct` - Volatility percentile within region
+
+
